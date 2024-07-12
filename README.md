@@ -25,15 +25,16 @@ The company aims to gain insights into how people are using their smart devices.
 
 ### 1. Ask 
 
-1.1	**What is the problem we are trying to solve?**
+**1.1	What is the problem we are trying to solve?**
 	The problem we are trying to solve is understanding how users interact with their smart devices to identify patterns and trends that can help Bellabeat optimize its marketing strategy and unlock new growth opportunities.
 
-1.2	**How can we drive business decisions?**
+**1.2	How can we drive business decisions?**
 	By analyzing smart device usage data, we can identify key insights and trends that inform Bellabeat on user behavior. These insights can guide decisions on targeted advertising, product development, and marketing campaigns across various channels such as radio, TV, print, billboards, and social media platforms like Google Search, Instagram, Facebook, and Twitter.
 
 
-### 2. Prepare 
-2.1: **Data:**
+### 2. Prepare and Clean 
+
+**2.1 Data:**
 Urška Sršen, Bellabeat’s cofounder and Chief Creative Officer, encourages the use of public data that explores smart device users' habits. She points to a specific dataset: [FitBit Fitness Tracker Data](https://www.kaggle.com/datasets/arashnic/fitbit), which is made available through Mobius on Kaggle and updated annually.
 •	Data Source: FitBit Fitness Tracker Data (CC0: Public Domain, dataset available through Mobius).
 •	Data Type: CSV files.
@@ -46,7 +47,169 @@ Urška Sršen, Bellabeat’s cofounder and Chief Creative Officer, encourages th
 
 •	Limited Descriptive: Age, Sex, Career or Life Style.
 
+• Each file of data was explored to know to work with data, columns, data types, names .. etc
+
+**2.2 Loading Packages:**
+
+```
+install.packages("tidyverse")
+install.packages("here")
+install.packages("skimr")
+install.packages("janitor")
+install.packages("lubridate")
+install.packages("readr")
+install.packages("ggpubr")
+```
+
+```
+library(tidyverse)
+library(here)
+library(skimr)
+library(janitor)
+library(lubridate)
+library(readr)
+library(ggpubr)
+```
+
+**2.3 Importing data and with names:**
+```
+dailyActivity <- read.csv("/cloud/project/Bellabeat/dailyActivity_merged.csv", header = TRUE)
+heartrate <- read.csv("/cloud/project/Bellabeat/heartrate_seconds_merged.csv", header = TRUE)
+sleepDay <- read.csv("/cloud/project/Bellabeat/sleepDay_merged.csv", header = TRUE)
+hourlyCalories <- read.csv("/cloud/project/Bellabeat/hourlyCalories_merged.csv", header = TRUE)
+minuteSleep <- read.csv("/cloud/project/Bellabeat/minuteSleep_merged.csv", header = TRUE)
+sleepDay <- read.csv("/cloud/project/Bellabeat/sleepDay_merged.csv", header = TRUE)
+weight <- read.csv("/cloud/project/Bellabeat/weightLogInfo_merged.csv", header = TRUE)
+```
+
+**2.4 Take a look again on data and its structure:**
+
+```
+head(dailyActivity)
+head(heartrate)
+head(sleepDay)
+head(hourlyCalories)
+head(minuteSleep)
+head(weight)
+```
+
+```
+str(dailyActivity)
+str(heartrate)
+str(sleepDay)
+str(hourlyCalories)
+str(minuteSleep)
+str(weight)
+```
+
+**2.5 Lets check the number of participants in each file:***
+```
+n_unique(dailyActivity$Id)
+n_unique(heartrate$Id)
+n_unique(sleepDay$Id)
+n_unique(hourlyCalories$Id)
+n_unique(minuteSleep$Id)
+n_unique(weight$Id)
+```
+
+Output:
+```
+[1] 33
+[1] 7
+[1] 24
+[1] 33
+[1] 24
+[1] 8
+```
+All datasets have 33 participants each, except for the heartrate and weight datasets, which have 7 and 8 participants, respectively. I will drop the heartrate and weight datasets because a sample size of 7 and 8 participants is too small to draw conclusions and make recommendations.
+
+**2.6 Duplicates :**
+
+```
+sum(duplicated(dailyActivity))
+sum(duplicated(sleepDay))
+sum(duplicated(hourlyCalories))
+sum(duplicated(minuteSleep))
+sum(duplicated(sleepDay))
+```
+
+Output:
+```
+[1] 0
+[1] 3
+[1] 0
+[1] 543
+[1] 3
+```
+
+Drop the duplicated row:
+```
+dailyActivity <- dailyActivity %>%
+  distinct() %>%
+  drop_na()
+sleepDay <- sleepDay %>%
+  distinct() %>%
+  drop_na()
+hourlyCalories <- hourlyCalories %>%
+  distinct() %>%
+  drop_na()
+minuteSleep <- minuteSleep %>%
+  distinct() %>%
+  drop_na()
+
+sleepDay <- sleepDay %>%
+  distinct() %>%
+  drop_na()
+
+```
+
 ### 3. Process 
+
+**3.1 Make Time and Date Same Format:**
+```
+dailyActivity <- dailyActivity %>%
+  rename(date = ActivityDate) %>%
+  mutate(date = as_date(date, format = "%m/%d/%Y"))
+
+sleepDay <- sleepDay %>%
+  rename(date = SleepDay) %>%
+  mutate(date = as_date(date, format ="%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone()))
+
+hourlyCalories <- hourlyCalories %>% 
+  rename(date_time = ActivityHour) %>% 
+  mutate(date_time = as.POSIXct(date_time, format ="%m/%d/%Y %I:%M:%S %p" , tz=Sys.timezone()))
+
+minuteSleep <- minuteSleep %>% 
+  rename(date_time = date) %>% 
+  mutate(date_time = as.POSIXct(date_time, format ="%m/%d/%Y %H:%M", tz=Sys.timezone()))
+
+sleepDay <- sleepDay %>% 
+  rename(date = date) %>%
+  mutate(date = as_date(date, format = "%m/%d/%Y"))
+```
+
+**3.2 Lets merge the data of sleeping (per day) to the daily activity file (like JOIN):**
+```
+daily_activity_sleep <- merge(dailyActivity, sleepDay, by= c("Id", "date"))
+```
+
+**3.3 Calculate Time in Bed without Sleeping:**
+I will subtract the TotalMinutesAsleep from TotalTimeInBed to determine the pure sleeping time and to see how long people stay in bed without sleeping. I will call this new column 'InBedWithoutSleeping'.
+
+```
+daily_activity_sleep$InBedWithoutSleeping <- daily_activity_sleep$TotalTimeInBed - daily_activity_sleep$TotalMinutesAsleep
+```
+**3.4 Creating new DataFrame that contains the average daily values of data for each participant:**
+
+```{r}
+daily_average <- daily_activity_sleep %>%
+  group_by(Id) %>%
+  summarise (mean_daily_steps = mean(TotalSteps),   mean_daily_calories = mean(Calories), mean_daily_sleep = mean(TotalMinutesAsleep), mean_time_inBed_without_sleep=mean(InBedWithoutSleeping))
+```
+
+
+
+
 ### 4. Analysis & Share
 ### 5. Act and Recomendation 
 

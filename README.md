@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/065e504d-a254-451a-9ecb-75a39d0e80c2)# Bellabeat---Data-Analysis-Case-Study
+# Bellabeat---Data-Analysis-Case-Study
 
 ## Overview
 This project is a case study for the final stage of the Google Data Analysis Course on Coursera. The objective is to analyze data from smart device users to help the high-tech company Bellabeat unlock new growth opportunities. Bellabeat has invested in traditional advertising media such as radio, TV, print, and out-of-home billboards, as well as digital channels like Google Search, Instagram, Facebook, and Twitter.

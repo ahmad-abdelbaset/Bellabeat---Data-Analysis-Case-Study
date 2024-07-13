@@ -23,7 +23,7 @@ Bellabeat has introduced five products:
 ## Project Goals
 The company aims to gain insights into how people are using their smart devices. Using this information, we will provide high-level recommendations to inform Bellabeat's marketing strategy.
 
-### 1. Ask 
+### 1. <u>Ask </u>
 
 **1.1	What is the problem we are trying to solve?**
 	<br/>The problem we are trying to solve is understanding how users interact with their smart devices to identify patterns and trends that can help Bellabeat optimize its marketing strategy and unlock new growth opportunities.
@@ -32,7 +32,7 @@ The company aims to gain insights into how people are using their smart devices.
 	<br/>By analyzing smart device usage data, we can identify key insights and trends that inform Bellabeat on user behavior. These insights can guide decisions on targeted advertising, product development, and marketing campaigns across various channels such as radio, TV, print, billboards, and social media platforms like Google Search, Instagram, Facebook, and Twitter.
 
 
-### 2. Prepare and Clean 
+### 2. <u>Prepare and Clean </u>
 
 **2.1 Data:**
 Urška Sršen, Bellabeat’s cofounder and Chief Creative Officer, encourages the use of public data that explores smart device users' habits. She points to a specific dataset: [FitBit Fitness Tracker Data](https://www.kaggle.com/datasets/arashnic/fitbit), which is made available through Mobius on Kaggle and updated annually.
@@ -163,7 +163,7 @@ sleepDay <- sleepDay %>%
 
 ```
 
-### 3. Process 
+### 3. <u>Process</u> 
 
 **3.1 Make Time and Date Same Format:**
 ```
@@ -209,7 +209,7 @@ daily_average <- daily_activity_sleep %>%
   summarise (mean_daily_steps = mean(TotalSteps),   mean_daily_calories = mean(Calories), mean_daily_sleep = mean(TotalMinutesAsleep), mean_time_inBed_without_sleep=mean(InBedWithoutSleeping))
 ```
 
-### 4. Analysis & Share
+### 4. <u>Analysis</u>
 
 **4.1 User Types Distribution:**
 
@@ -405,7 +405,34 @@ ggplot(avg_timeInBed_UserType, aes(x = user_type, y = mean_time_in_Bed_per_UserT
 ![image](https://github.com/user-attachments/assets/9bce4f2a-0e53-4b1d-aa1c-5fbf76bdf269)
 
 
-### 5. Act and Recomendation 
+### 5. <u>Act and Recomendation</u> 
 
+### **Participant Activity Levels**
+- More than a third of participants are Fairly Active.
+- Only 20.8% are classified as Sedentary.
+
+### **Calorie Burn Timing**
+- Most calories are burned between 17:00 and 19:00.
+- The second peak for calorie burn is between 12:00 and 14:00.
+
+### **Device Usage**
+- About 50% of participants are high users of their smart devices.
+- 38% are moderate users of their smart devices.
+
+### **Correlation Analysis**
+- **Daily Steps vs. Minutes of Sleep:** Almost no correlation (correlation near 0).
+- **Calories vs. Daily Steps:** Significant correlation (P<2).
+
+### **Sedentary vs. Active Participants**
+- Sedentary participants spend more time in bed without sleeping compared to active participants.
+
+## **Conclusion**
+Based on the analysis, several insights can help Bellabeat tailor their marketing strategies and product development. Understanding the activity levels and behavior patterns of users is crucial for enhancing user engagement and promoting healthier lifestyles.
+
+## **Recommendations**
+- **Target Fairly Active Users:** Since more than a third of the participants fall into this category, marketing efforts should be tailored to their preferences and activity patterns.
+- **Promote Usage During Peak Calorie Burn Times:** Encourage device usage and activity tracking during peak calorie burn times (17:00-19:00 and 12:00-14:00).
+- **Engage High and Moderate Device Users:** Develop features and campaigns that cater to the high and moderate device users to maintain and increase their engagement.
+- **Address Sedentary Behavior:** Implement features or programs that help reduce the time sedentary participants spend in bed without sleeping.
 
 

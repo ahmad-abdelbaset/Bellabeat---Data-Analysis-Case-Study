@@ -1,0 +1,323 @@
+---
+title: "Bellabeat Case Study"
+author: "Ahmad Abdelbaset"
+date: "2024-07-06"
+output: html_document
+---
+## Bellabeat Project (Google Data Analytics Capstone)
+
+We start by installing the required packaes
+
+
+``` {r }
+install.packages("tidyverse")
+install.packages("here")
+install.packages("skimr")
+install.packages("janitor")
+install.packages("lubridate")
+install.packages("readr")
+
+```
+
+Then, we will bring the libraries:
+```{r}
+library(tidyverse)
+library(here)
+library(skimr)
+library(janitor)
+library(lubridate)
+library(readr)
+```
+
+and then we will bring the files of dataset:
+```{r}
+dailyActivity <- read.csv("dailyActivity_merged.csv", header = TRUE)
+heartrate <- read.csv("heartrate_seconds_merged.csv", header = TRUE)
+sleepDay <- read.csv("sleepDay_merged.csv", header = TRUE)
+hourlyCalories <- read.csv("hourlyCalories_merged.csv", header = TRUE)
+minuteSleep <- read.csv("minuteSleep_merged.csv", header = TRUE)
+sleepDay <- read.csv("sleepDay_merged.csv", header = TRUE)
+weight <- read.csv("weightLogInfo_merged.csv", header = TRUE)
+```
+
+Lets see the data
+
+```{r}
+head(dailyActivity)
+head(heartrate)
+head(sleepDay)
+head(hourlyCalories)
+head(minuteSleep)
+head(weight)
+```
+
+Before starting analyzing, we need to take a look on the structure of data:
+
+```{r}
+str(dailyActivity)
+str(heartrate)
+str(sleepDay)
+str(hourlyCalories)
+str(minuteSleep)
+str(weight)
+```
+
+
+We need to ensure about the number of participant in each file:
+
+```{r}
+n_unique(dailyActivity$Id)
+n_unique(heartrate$Id)
+n_unique(sleepDay$Id)
+n_unique(hourlyCalories$Id)
+n_unique(minuteSleep$Id)
+n_unique(weight$Id)
+```
+
+All data sets have 33 participants each except the heartrate, and weight data set which has 7, and 8 participants respectively.
+I will drop the heartrate and weight data sets because 7 and 8 participants is too small a sample to draw conclusions and make recommendations.
+
+Lets check for Duplicates:
+
+```{r}
+sum(duplicated(dailyActivity))
+sum(duplicated(sleepDay))
+sum(duplicated(hourlyCalories))
+sum(duplicated(minuteSleep))
+sum(duplicated(sleepDay))
+
+```
+Then we have duplicates, we have to remove it:
+
+```{r}
+dailyActivity <- dailyActivity %>%
+  distinct() %>%
+  drop_na()
+sleepDay <- sleepDay %>%
+  distinct() %>%
+  drop_na()
+hourlyCalories <- hourlyCalories %>%
+  distinct() %>%
+  drop_na()
+minuteSleep <- minuteSleep %>%
+  distinct() %>%
+  drop_na()
+
+sleepDay <- sleepDay %>%
+  distinct() %>%
+  drop_na()
+
+```
+
+Make date and time columns consistent
+```{r}
+dailyActivity <- dailyActivity %>%
+  rename(date = ActivityDate) %>%
+  mutate(date = as_date(date, format = "%m/%d/%Y"))
+
+sleepDay <- sleepDay %>%
+  rename(date = SleepDay) %>%
+  mutate(date = as_date(date, format ="%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone()))
+
+hourlyCalories <- hourlyCalories %>% 
+  rename(date_time = ActivityHour) %>% 
+  mutate(date_time = as.POSIXct(date_time, format ="%m/%d/%Y %I:%M:%S %p" , tz=Sys.timezone()))
+
+minuteSleep <- minuteSleep %>% 
+  rename(date_time = date) %>% 
+  mutate(date_time = as.POSIXct(date, format ="%m/%d/%Y %I:%M:%S %p" , tz=Sys.timezone()))
+
+sleepDay <- sleepDay %>% 
+  rename(date = date) %>%
+  mutate(date = as_date(date, format = "%m/%d/%Y"))
+
+```
+
+Now, I will merge dailyActivity and sleepDay:
+```{r}
+daily_activity_sleep <- merge(dailyActivity, sleepDay, by= c("Id", "date"))
+```
+
+I will subtract the TotalMinutesASleep from TotalTimeInBed to know the pure time of seelping and to see how long people are stay in the bed without sleeping i will call for this "InBedWithoutSleeping"
+
+```{r}
+daily_activity_sleep$InBedWithoutSleeping <- daily_activity_sleep$TotalTimeInBed - daily_activity_sleep$TotalMinutesAsleep
+
+```
+
+```{r}
+daily_average <- daily_activity_sleep %>%
+  group_by(Id) %>%
+  summarise (mean_daily_steps = mean(TotalSteps),   mean_daily_calories = mean(Calories), mean_daily_sleep = mean(TotalMinutesAsleep), mean_time_inBed_without_sleep=mean(InBedWithoutSleeping))
+```
+
+Now I want to calssiy the type of users into four groups according to their average total steps:
+Sedentary: fewer than 5,000 steps per day
+Lightly_Active: between 5,000 and 7,499 steps per day
+Fairly_Active: between 7,500 and 9,999 steps per day
+Highly_Active: 10,000 steps per day or more
+
+```{r}
+classify_activity <- function(steps) {
+  if (steps < 5000) {
+    return("Sedentary")
+  } else if (steps >= 5000 & steps < 7500) {
+    return("Lightly_Active")
+  } else if (steps >= 7500 & steps < 10000) {
+    return("Fairly_Active")
+  } else {
+    return("Highly_Active")
+  }
+}
+
+daily_average$user_type <- daily_average %>%
+  mutate(user_type = sapply(mean_daily_steps, classify_activity))
+```
+
+Lets see the distribution of user_types:
+```{r}
+freq <- table(daily_average$user_type$user_type)
+percentages <- prop.table(freq) * 100
+
+# Create the pie chart with percentages
+pie(freq, labels = paste(names(freq), ": ", freq, " (", round(percentages, 1), "%)", sep = ""), main = "Distribution of User Types")
+
+
+```
+
+
+Now I will create a data frame that shows the average calories per hour during 24 hours, the file will be used is (hourlyCalories):
+
+```{r}
+AverageCaloriesPerHour <- hourlyCalories %>%
+    mutate(hour = format(date_time, "%H")) %>%
+    group_by(hour) %>%
+    summarise(avg_calories = mean(Calories, na.rm = TRUE))
+
+```
+
+Lets visualize it and see what in which hours people loss more calories:
+
+```{r}
+ggplot(AverageCaloriesPerHour, aes(x = hour, y = avg_calories)) + geom_bar(stat = "identity", fill = "steelblue") + labs(title = "Average Calories", x = "Hour", y = "Calories") +
+  theme_minimal()
+
+```
+
+Lets see now the how the average sleep minutes and average steps in each weekday:
+
+```{r}
+
+weekday_steps_sleep <- daily_activity_sleep %>%
+  mutate(weekday = weekdays(date))
+
+weekday_steps_sleep$weekday <-ordered(weekday_steps_sleep$weekday, levels=c("Monday", "Tuesday", "Wednesday", "Thursday",
+"Friday", "Saturday", "Sunday"))
+
+ weekday_steps_sleep <-weekday_steps_sleep%>%
+  group_by(weekday) %>%
+  summarize (mean_steps=mean(TotalSteps), mean_sleep = mean(TotalMinutesAsleep))
+```
+
+Lets plot it and see how they sleep and walk in weekdays:
+```{R}
+install.packages("ggpubr")
+
+library(ggpubr)
+```
+
+```{R}
+ggarrange(
+    ggplot(weekday_steps_sleep) +
+      geom_col(aes(weekday, mean_steps), fill = "#006699") +
+      geom_hline(yintercept = 7500) +
+      labs(title = "Daily steps per weekday", x= "", y = "") +
+      theme(axis.text.x = element_text(angle = 45,vjust = 0.5, hjust = 1)), ggplot(weekday_steps_sleep, aes(weekday, mean_sleep)) +
+      geom_col(fill = "#85e0e0") +
+      geom_hline(yintercept = 480) +
+      labs(title = "Minutes asleep per weekday", x= "", y = "") +
+      theme(axis.text.x = element_text(angle = 45,vjust = 0.5, hjust = 1))
+  )
+```
+
+
+Now, lets see how the users are using their smart device:
+
+```{r}
+
+daily_use <- daily_activity_sleep %>%
+  group_by(Id) %>%
+  summarize(days_used=sum(n())) %>%
+  mutate(usage = case_when(
+    days_used >= 1 & days_used <= 10 ~ "low use",
+    days_used >= 11 & days_used <= 20 ~ "moderate use", 
+    days_used >= 21 & days_used <= 31 ~ "high use", 
+  ))
+  
+head(daily_use)
+```
+
+We will see the percentage and then visualize it:
+
+```{r}
+
+daily_use_percent <- daily_use %>%
+  group_by(usage) %>%
+  summarise(total = n()) %>%
+  mutate(totals = sum(total)) %>%
+  group_by(usage) %>%
+  summarise(total_percent = total / totals) %>%
+  mutate(labels = scales::percent(total_percent))
+
+daily_use_percent$usage <- factor(daily_use_percent$usage, levels = c("high use", "moderate use", "low use"))
+
+head(daily_use_percent)
+```
+
+
+We classified the users according to their usage time, and now we have to visualize the result:
+
+```{r}
+daily_use_percent %>%
+  ggplot(aes(x="",y=total_percent, fill=usage)) +
+  geom_bar(stat = "identity", width = 1)+
+  coord_polar("y", start=0)+
+  theme_minimal()+
+  theme(axis.title.x= element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(), 
+        panel.grid = element_blank(), 
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=14, face = "bold")) +
+  geom_text(aes(label = labels),
+            position = position_stack(vjust = 0.5))+
+  scale_fill_manual(values = c("#006633","#00e673","#80ffbf"),
+                    labels = c("High use - 21 to 31 days",
+                                 "Moderate use - 11 to 20 days",
+                                 "Low use - 1 to 10 days"))+
+  labs(title="Daily use of smart device")
+
+```
+Now, Lets see the how the correlation looks like between (daily steps vs calories) and (daily steps vs sleep)
+
+```{r}
+ggplot(data= subset(daily_activity_sleep,!is.na(TotalMinutesAsleep)),aes(TotalSteps,TotalMinutesAsleep))+
+    geom_rug(position= "jitter", size=.08)+
+    geom_jitter(alpha= 0.5)+
+    geom_smooth(color= "blue", linewidth=.6)+
+    stat_cor(method = "pearson", label.x = 15000, label.y = 650)+
+    labs(title= "Daily steps vs. sleep", x= "Daily Steps", y= "Minutes Asleep")+
+    theme_minimal()
+
+```
+```{r}
+ggplot(daily_activity_sleep,aes(TotalSteps,Calories))+geom_jitter(alpha=.5)+
+    geom_rug(position="jitter", linewidth=.08)+
+    geom_smooth(linewidth =.6)+
+    stat_cor(method = "pearson", label.x = 20000, label.y = 2300)+
+    labs(title= "Daily Steps vs. Calories", x= "Daily steps", y="Calories")+
+    theme_minimal()
+
+```
+
